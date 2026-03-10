@@ -27,7 +27,7 @@ Active task list for SniperSan development. Items are grouped by area and ordere
 - [ ] **Remediation guidance** — per-vulnerability fix text in HTML and Markdown reports
 
 ### Medium Priority
-- [ ] **Shodan lookup** — passive recon via Shodan API (optional `SHODAN_API_KEY` in `.env`)
+- [x] **Shodan lookup** — passive recon via Shodan API (optional `SHODAN_API_KEY` in `.env`)
 - [ ] **Recursive dir busting** — follow discovered directories and bust recursively
 - [ ] **Executive summary AI section** — use Claude to write natural-language summary in report
 - [ ] **Diff reports** — compare two scan runs, highlight new/fixed findings
@@ -118,3 +118,4 @@ Active task list for SniperSan development. Items are grouped by area and ordere
 - [x] CVSS v3.1 auto-scoring (18-entry lookup table)
 - [x] Scan profiles (stealth / aggressive / api-only / wordpress)
 - [x] IP target normalization (defaults to http://)
+- [x] Shodan lookup (open ports, CVEs, banners, ASN, ISP, geolocation)

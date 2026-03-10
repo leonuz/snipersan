@@ -11,6 +11,7 @@ TEMPLATES_DIR = BASE_DIR / "templates"
 
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
 WPSCAN_API_TOKEN = os.getenv("WPSCAN_API_TOKEN", "")
+SHODAN_API_KEY = os.getenv("SHODAN_API_KEY", "")
 CLAUDE_MODEL = "claude-sonnet-4-6"
 
 DEFAULT_TIMEOUT = 10

@@ -271,6 +271,15 @@ TOOLS = [
         }
     },
     {
+        "name": "shodan_lookup",
+        "description": "Query Shodan for existing scan data on the target IP: open ports, services, banners, CVEs, ASN, ISP, geolocation. Passive — no traffic sent to target.",
+        "input_schema": {
+            "type": "object",
+            "properties": {"target": {"type": "string", "description": "Target domain or URL"}},
+            "required": ["target"]
+        }
+    },
+    {
         "name": "vhost_enum",
         "description": "Virtual host enumeration by fuzzing the Host header to discover hidden vhosts on the same IP.",
         "input_schema": {
@@ -576,6 +585,11 @@ def _dispatch_tool(name: str, inputs: dict, findings: dict) -> Any:
         findings["dns"] = result
         return result
 
+    elif name == "shodan_lookup":
+        result = recon.shodan_lookup(target)
+        findings["shodan"] = result
+        return result
+
     elif name == "vhost_enum":
         result = enumeration.vhost_enum(target)
         findings["vhosts"] = result
@@ -673,7 +687,7 @@ def _dispatch_tool(name: str, inputs: dict, findings: dict) -> Any:
 SYSTEM_PROMPT = """You are SniperSan, an expert web penetration testing agent. Your mission is to perform a comprehensive security assessment of the given target.
 
 Follow this methodology:
-1. **Reconnaissance**: detect_waf → nmap → check_headers → check_ssl → check_robots_sitemap → fingerprint_tech → scan_js_secrets → dns_enum → subdomain_crtsh. If WordPress detected → run_wpscan immediately.
+1. **Reconnaissance**: detect_waf → shodan_lookup → nmap → check_headers → check_ssl → check_robots_sitemap → fingerprint_tech → scan_js_secrets → dns_enum → subdomain_crtsh. If WordPress detected → run_wpscan immediately.
 2. **Enumeration**: spider_urls → dir_bust → subdomain_enum → vhost_enum → param_discovery
 3. **Vulnerability Scanning**: test_sqli → test_xss → test_ssti → check_cors → check_csrf → check_sensitive_files → test_open_redirect → check_http_methods → test_403_bypass → test_graphql → run_nuclei → test_idor
 4. **Exploitation**: test_lfi → test_command_injection → test_xxe → test_ssrf → test_jwt → test_request_smuggling → test_default_creds. If users found (WPScan/spider) → password_spray.
@@ -707,7 +721,7 @@ class PentestAgent:
 
         PROFILE_INSTRUCTIONS = {
             "stealth": (
-                "PROFILE: STEALTH — Passive recon only. Use: detect_waf, check_headers, check_ssl, "
+                "PROFILE: STEALTH — Passive recon only. Use: detect_waf, shodan_lookup, check_headers, check_ssl, "
                 "check_robots_sitemap, fingerprint_tech, scan_js_secrets, dns_enum, subdomain_crtsh. "
                 "Do NOT run active exploitation, brute-force, dir_bust, or nmap. Minimal footprint."
             ),

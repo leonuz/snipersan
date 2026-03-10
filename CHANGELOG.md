@@ -4,6 +4,21 @@ All notable changes to SniperSan are documented here.
 
 ---
 
+## [1.3.2] — 2026-03-10
+
+### Added
+- **`shodan_lookup`** — Passive Shodan query for the target IP: open ports, service banners, CVEs, ASN, ISP, geolocation, OS, tags. Runs before nmap in the recon phase — zero traffic sent to the target. Flags CRITICAL if Shodan reports known CVEs; HIGH if dangerous ports (21, 23, 445, 3389, 5900, 6379, 27017, 9200, 5432, 3306) are exposed.
+- **`SHODAN_API_KEY`** config — loaded from `.env`; tool gracefully reports missing key without crashing
+
+### Changed
+- `requirements.txt` — added `shodan>=1.31.0`
+- `.env.example` — added `SHODAN_API_KEY` placeholder
+- System prompt recon phase order: `detect_waf → shodan_lookup → nmap → ...`
+- Stealth profile now includes `shodan_lookup` (fully passive, no target traffic)
+- Agent tool count: 38 → 39
+
+---
+
 ## [1.3.1] — 2026-03-10
 
 ### Added

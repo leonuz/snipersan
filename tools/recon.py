@@ -10,7 +10,7 @@ from datetime import datetime
 import requests
 from bs4 import BeautifulSoup
 
-from config import DEFAULT_TIMEOUT, TOOL_PATHS, WPSCAN_API_TOKEN
+from config import DEFAULT_TIMEOUT, TOOL_PATHS, WPSCAN_API_TOKEN, SHODAN_API_KEY
 
 
 def _get_base_url(target: str) -> str:
@@ -810,4 +810,90 @@ def dns_enum(target: str) -> dict:
     result["zone_transfer_success"] = zone_transfer_success
     result["zone_transfer_data"] = zone_transfer_data
     result["success"] = True
+    return result
+
+
+def shodan_lookup(target: str) -> dict:
+    """Query Shodan for existing scan data on the target IP/domain."""
+    import shodan as shodan_lib
+
+    result = {"tool": "shodan_lookup", "target": target}
+
+    if not SHODAN_API_KEY:
+        result["error"] = "SHODAN_API_KEY not configured"
+        result["success"] = False
+        return result
+
+    domain = _get_domain(target)
+
+    # Resolve domain to IP if needed
+    try:
+        ip = socket.gethostbyname(domain)
+    except socket.gaierror:
+        result["error"] = f"Could not resolve {domain}"
+        result["success"] = False
+        return result
+
+    result["ip"] = ip
+
+    try:
+        api = shodan_lib.Shodan(SHODAN_API_KEY)
+        host = api.host(ip)
+
+        # Core host info
+        result["hostnames"] = host.get("hostnames", [])
+        result["domains"] = host.get("domains", [])
+        result["org"] = host.get("org", "")
+        result["isp"] = host.get("isp", "")
+        result["asn"] = host.get("asn", "")
+        result["country"] = host.get("country_name", "")
+        result["city"] = host.get("city", "")
+        result["os"] = host.get("os", "")
+        result["last_update"] = host.get("last_update", "")
+        result["tags"] = host.get("tags", [])
+        result["vulns"] = list(host.get("vulns", {}).keys())
+
+        # Open ports and services
+        ports = []
+        for item in host.get("data", []):
+            port_info = {
+                "port": item.get("port"),
+                "transport": item.get("transport", "tcp"),
+                "product": item.get("product", ""),
+                "version": item.get("version", ""),
+                "cpe": item.get("cpe", []),
+                "banner": (item.get("data", "") or "")[:200].strip(),
+            }
+            # SSL info if present
+            if "ssl" in item:
+                ssl_data = item["ssl"]
+                port_info["ssl"] = {
+                    "subject": ssl_data.get("cert", {}).get("subject", {}),
+                    "expires": ssl_data.get("cert", {}).get("expires", ""),
+                    "cipher": ssl_data.get("cipher", {}).get("name", ""),
+                }
+            ports.append(port_info)
+
+        result["ports"] = ports
+        result["open_port_numbers"] = sorted({p["port"] for p in ports})
+
+        # Severity: CRITICAL if known CVEs, HIGH if dangerous ports open
+        dangerous_ports = {21, 23, 445, 3389, 5900, 6379, 27017, 9200, 5432, 3306}
+        exposed = dangerous_ports & set(result["open_port_numbers"])
+        if result["vulns"]:
+            result["severity"] = "CRITICAL"
+            result["finding"] = f"Shodan reports {len(result['vulns'])} known CVE(s): {', '.join(result['vulns'][:5])}"
+        elif exposed:
+            result["severity"] = "HIGH"
+            result["finding"] = f"Dangerous services exposed: ports {sorted(exposed)}"
+        else:
+            result["severity"] = "INFO"
+            result["finding"] = f"{len(ports)} services indexed by Shodan"
+
+        result["success"] = True
+
+    except shodan_lib.APIError as e:
+        result["error"] = str(e)
+        result["success"] = False
+
     return result
