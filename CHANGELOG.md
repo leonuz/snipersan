@@ -4,6 +4,20 @@ All notable changes to SniperSan are documented here.
 
 ---
 
+## [1.3.1] — 2026-03-10
+
+### Added
+- **GitHub repository** — Project is now publicly available at https://github.com/leonuz/snipersan
+- **`install.sh`** — Automated installer for Debian/Ubuntu: installs system dependencies (nmap, Ruby, WPScan, Nuclei), WeasyPrint system libs, Python packages, and walks through `.env` setup interactively
+- **`.gitignore`** — Excludes `.env`, `__pycache__`, generated reports, IDE files, and `.claude/` internals from version control
+- **`requirements.txt` updated** — Added missing packages: `cvss>=2.6`, `dnspython>=2.6.0`, `weasyprint>=62.0`
+- **`reports/.gitkeep`** — `reports/` directory is now tracked in git so it exists on fresh clones without committing generated output
+
+### Changed
+- Project is now installable on any fresh Debian/Ubuntu server with a single command: `bash install.sh`
+
+---
+
 ## [1.3.0] — 2026-03-10
 
 ### Added
