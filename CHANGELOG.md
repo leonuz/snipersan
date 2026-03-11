@@ -4,6 +4,17 @@ All notable changes to SniperSan are documented here.
 
 ---
 
+## [1.4.0] — 2026-03-11 (in progress)
+
+### Planned
+- Multi-LLM backend: Claude (Anthropic) + Ollama (local models)
+- Interactive LLM selector at startup
+- `--llm` CLI flag for non-interactive selection
+- OpenClaw skill (`/snipersan`) via SSH
+- `--query` single-shot mode for external callers
+
+---
+
 ## [1.3.2] — 2026-03-10
 
 ### Added

@@ -46,6 +46,20 @@ Planned features and improvements for SniperSan, ordered by priority.
 
 ## Near-term (v1.4)
 
+### Multi-LLM Backend (in progress)
+- **LLM selector at startup** — interactive prompt to choose Claude or Ollama before scan begins
+- **Claude backend** — existing Anthropic API with native tool use
+- **Ollama backend** — local models (llama3, qwen2.5, deepseek-r1, etc.) via `http://localhost:11434`
+  - Tool use via structured prompt (models with function-calling: qwen2.5, llama3.1)
+  - 100% local — pentest data never leaves the machine
+- **`--llm` CLI flag** — skip interactive selector: `--llm claude` or `--llm ollama`
+- **`OLLAMA_HOST`** config — configurable Ollama server URL (default: `http://localhost:11434`)
+- **`OLLAMA_MODEL`** config — default model for Ollama backend
+
+### OpenClaw Integration
+- **`/snipersan` skill** — SSH-based skill for OpenClaw orchestrator (same pattern as SniperFIN)
+- **`--query` mode** — single-shot invocation for external callers
+
 ### Active Exploitation
 - **Auth bypass patterns** — SQLi in login fields, type juggling, mass assignment tests
 - **Mass assignment** — Send extra JSON fields to API endpoints, check if accepted
@@ -54,7 +68,6 @@ Planned features and improvements for SniperSan, ordered by priority.
 
 ### Passive Recon
 - **WHOIS lookup** — Registrar info, registration dates, nameservers via `python-whois`
-- **Shodan/Censys lookup** — Pull existing scan data for target IP (optional API key)
 - **Google dorking** — Automated dork queries for sensitive file/panel exposure
 
 ### Enumeration
