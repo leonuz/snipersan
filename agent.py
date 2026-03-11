@@ -878,6 +878,51 @@ class PentestAgent:
             "iterations": iteration
         }
 
+    def query(self, user_input: str) -> str:
+        """Single-shot query mode for OpenClaw and external callers. Returns plain text."""
+        self.findings = {}
+        self.messages = [{"role": "user", "content": user_input}]
+
+        output_parts = []
+        iteration = 0
+        max_iterations = 30
+
+        while iteration < max_iterations:
+            iteration += 1
+            try:
+                response = self.llm.chat(
+                    messages=self.messages,
+                    system=SYSTEM_PROMPT,
+                    tools=TOOLS,
+                )
+            except Exception as e:
+                return f"Error: {e}"
+
+            self.messages.append(self.llm.build_assistant_message(response))
+
+            if response["text"]:
+                output_parts.append(response["text"])
+
+            tool_results = []
+            for tc in response["tool_calls"]:
+                try:
+                    result = _dispatch_tool(tc["name"], tc["input"], self.findings)
+                except Exception as e:
+                    result = {"error": str(e)}
+                tool_results.append({
+                    "id": tc["id"],
+                    "name": tc["name"],
+                    "content": json.dumps(result, default=str)[:8000],
+                })
+
+            if tool_results:
+                self.messages.append(self.llm.build_tool_result_message(tool_results))
+
+            if response["stop_reason"] == "end_turn" and not response["tool_calls"]:
+                break
+
+        return "\n".join(output_parts)
+
     def chat(self, target: str) -> None:
         """Interactive chat mode with the agent."""
         self.findings = {}

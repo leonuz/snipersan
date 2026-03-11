@@ -180,6 +180,8 @@ Examples:
     parser.add_argument("-p", "--profile",
                         choices=["stealth", "aggressive", "api-only", "wordpress"],
                         help="Scan profile: stealth (passive only), aggressive (all tools), api-only (API focus), wordpress (WP-specific)")
+    parser.add_argument("--query", "-q",
+                        help="Single-shot query for OpenClaw/external callers (e.g. --query 'scan http://target.com port 8080')")
     parser.add_argument("--port", "-P",
                         help="Scope: port number for web app (8080→full web testing on that port), "
                              "'service:PORT' for non-web service, 'web' for 80/443 only, 'recon' for recon only.")
@@ -194,6 +196,16 @@ Examples:
 
 def main():
     args = parse_args()
+
+    # --query mode: silent single-shot for OpenClaw and external callers
+    if getattr(args, 'query', None):
+        from llm import ClaudeBackend
+        from agent import PentestAgent
+        agent = PentestAgent(llm_backend=ClaudeBackend())
+        result = agent.query(args.query)
+        print(result)
+        return
+
     console.print(BANNER)
 
     # LLM selector
