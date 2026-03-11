@@ -270,7 +270,7 @@ TOOLS = [
     },
     {
         "name": "shodan_lookup",
-        "description": "Query Shodan for existing scan data on the target IP: open ports, services, banners, CVEs, ASN, ISP, geolocation. Passive — no traffic sent to target.",
+        "description": "Query Shodan for existing scan data on the target IP: open ports, services, banners, CVEs, ASN, ISP, geolocation. Passive — no traffic sent to target. Automatically skipped for private/internal IPs (CTF labs, 10.x, 192.168.x, *.htb, *.thm, localhost).",
         "input_schema": {
             "type": "object",
             "properties": {"target": {"type": "string", "description": "Target domain or URL"}},

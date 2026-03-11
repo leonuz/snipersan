@@ -4,6 +4,7 @@ import socket
 import ssl
 import json
 import re
+import ipaddress
 from urllib.parse import urlparse
 from datetime import datetime
 
@@ -835,6 +836,17 @@ def shodan_lookup(target: str) -> dict:
         return result
 
     result["ip"] = ip
+
+    # Skip Shodan for private/internal IPs (CTF, lab, local networks)
+    try:
+        addr = ipaddress.ip_address(ip)
+        if addr.is_private or addr.is_loopback or addr.is_link_local or addr.is_reserved:
+            result["skipped"] = True
+            result["reason"] = f"Private/internal IP ({ip}) — Shodan has no data for non-public hosts"
+            result["success"] = False
+            return result
+    except ValueError:
+        pass
 
     try:
         api = shodan_lib.Shodan(SHODAN_API_KEY)
