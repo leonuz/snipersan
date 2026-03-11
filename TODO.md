@@ -20,6 +20,8 @@ Active task list for SniperSan development. Items are grouped by area and ordere
 ## Features
 
 ### High Priority
+- [ ] **OpenClaw skill** — `/snipersan` SSH-based skill for OpenClaw orchestrator
+- [ ] **`--query` mode** — single-shot invocation for external callers (like SniperFIN)
 - [ ] **SecLists integration** — download common.txt (4700 entries) and subdomains (9985 entries) from SecLists on first run
 - [ ] **WHOIS lookup** — registrar info, registration dates, nameservers via `python-whois`
 - [ ] **Auth bypass patterns** — SQLi in login fields, type juggling payloads, mass assignment
@@ -27,6 +29,7 @@ Active task list for SniperSan development. Items are grouped by area and ordere
 - [ ] **Remediation guidance** — per-vulnerability fix text in HTML and Markdown reports
 
 ### Medium Priority
+- [x] **Multi-LLM backend** — Claude (Anthropic) + Ollama (local) with interactive selector, `--llm`/`--model` CLI flags
 - [x] **Shodan lookup** — passive recon via Shodan API (optional `SHODAN_API_KEY` in `.env`)
 - [ ] **Recursive dir busting** — follow discovered directories and bust recursively
 - [ ] **Executive summary AI section** — use Claude to write natural-language summary in report
@@ -119,3 +122,6 @@ Active task list for SniperSan development. Items are grouped by area and ordere
 - [x] Scan profiles (stealth / aggressive / api-only / wordpress)
 - [x] IP target normalization (defaults to http://)
 - [x] Shodan lookup (open ports, CVEs, banners, ASN, ISP, geolocation)
+- [x] Multi-LLM backend: `ClaudeBackend` + `OllamaBackend` abstraction in `llm.py`
+- [x] Interactive LLM selector at startup (Rich table, live Ollama model list)
+- [x] `--llm` / `--model` CLI flags for non-interactive LLM selection

@@ -44,17 +44,24 @@ Planned features and improvements for SniperSan, ordered by priority.
 
 ---
 
-## Near-term (v1.4)
+## Completed (v1.4) ✅
 
-### Multi-LLM Backend (in progress)
-- **LLM selector at startup** — interactive prompt to choose Claude or Ollama before scan begins
-- **Claude backend** — existing Anthropic API with native tool use
-- **Ollama backend** — local models (llama3, qwen2.5, deepseek-r1, etc.) via `http://localhost:11434`
-  - Tool use via structured prompt (models with function-calling: qwen2.5, llama3.1)
+### Multi-LLM Backend
+- **`llm.py`** — abstraction layer: `ClaudeBackend` + `OllamaBackend` with unified interface
+- **LLM selector at startup** — Rich table showing Claude + all available Ollama models (queried live from server)
+- **Claude backend** — Anthropic API with native tool use
+- **Ollama backend** — local models via OpenAI-compatible `/v1/chat/completions` at `http://sniperx1.uzc:11434`
+  - Available models: `qwen3.5:9b` (default), `qwen2.5:7b-instruct`, `llama3.1:8b`, `llama3`, `deepseek-r1:14b`, `llava`
+  - Tool use via OpenAI function-calling format (supported by qwen3.5, llama3.1, deepseek-r1)
   - 100% local — pentest data never leaves the machine
-- **`--llm` CLI flag** — skip interactive selector: `--llm claude` or `--llm ollama`
-- **`OLLAMA_HOST`** config — configurable Ollama server URL (default: `http://localhost:11434`)
-- **`OLLAMA_MODEL`** config — default model for Ollama backend
+- **`--llm` CLI flag** — non-interactive: `--llm claude` or `--llm ollama`
+- **`--model` CLI flag** — specify Ollama model: `--model deepseek-r1:14b`
+- **`OLLAMA_HOST`** / **`OLLAMA_MODEL`** config — loaded from `.env`, default `http://sniperx1.uzc:11434` / `qwen3.5:9b`
+- **Tool format converter** `_anthropic_to_openai_tools()` — Anthropic `input_schema` → OpenAI `parameters`
+
+---
+
+## Near-term (v1.5)
 
 ### OpenClaw Integration
 - **`/snipersan` skill** — SSH-based skill for OpenClaw orchestrator (same pattern as SniperFIN)
