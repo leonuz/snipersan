@@ -201,8 +201,12 @@ def main():
     if getattr(args, 'query', None):
         from llm import ClaudeBackend
         from agent import PentestAgent
+        # Strip skill prefix in case OpenClaw passes "/snipersan <query>" as-is
+        query = args.query.strip()
+        if query.lower().startswith("/snipersan"):
+            query = query[len("/snipersan"):].strip()
         agent = PentestAgent(llm_backend=ClaudeBackend())
-        result = agent.query(args.query)
+        result = agent.query(query)
         print(result)
         return
 
