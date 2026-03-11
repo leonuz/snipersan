@@ -64,6 +64,30 @@ def get_target() -> str:
         return target
 
 
+def get_scope() -> str | None:
+    """Prompt for scan scope — full, specific port, web-only, or recon-only."""
+    table = Table(box=box.SIMPLE, show_header=False, border_style="dim")
+    table.add_column("Key", style="bold cyan", width=4)
+    table.add_column("Scope")
+    table.add_row("1", "Full scan  — all phases (default)")
+    table.add_row("2", "Port       — focus on a specific port")
+    table.add_row("3", "Web only   — ports 80/443, skip port scans & DNS enum")
+    table.add_row("4", "Recon only — passive + active recon, no vuln scan/exploit")
+    console.print("\n[bold]Scan scope:[/bold]")
+    console.print(table)
+
+    choice = Prompt.ask("Scope", choices=["1", "2", "3", "4"], default="1")
+    if choice == "1":
+        return None
+    elif choice == "2":
+        port = Prompt.ask("  [bold yellow]Port number[/bold yellow]")
+        return port.strip()
+    elif choice == "3":
+        return "web"
+    else:
+        return "recon"
+
+
 def get_report_format() -> str:
     """Prompt for report format."""
     table = Table(box=box.SIMPLE, show_header=False, border_style="dim")
@@ -152,6 +176,8 @@ Examples:
     parser.add_argument("-p", "--profile",
                         choices=["stealth", "aggressive", "api-only", "wordpress"],
                         help="Scan profile: stealth (passive only), aggressive (all tools), api-only (API focus), wordpress (WP-specific)")
+    parser.add_argument("--port", "-P",
+                        help="Focus scan on a specific port (e.g. --port 8080). Use 'web' for 80/443 only, 'recon' for recon only.")
     parser.add_argument("--llm", choices=["claude", "ollama"],
                         help="LLM backend to use (skips interactive selector)")
     parser.add_argument("--model",
@@ -205,9 +231,10 @@ def main():
 
         if choice == "1":
             fmt = args.fmt if args.mode else get_report_format()
+            scope = getattr(args, 'port', None) or (None if args.mode else get_scope())
             console.print(f"\n[bold green]Starting automated pentest...[/bold green]\n")
             agent = PentestAgent(llm_backend=llm_backend)
-            result = agent.run(target, fmt, profile=getattr(args, 'profile', None))
+            result = agent.run(target, fmt, profile=getattr(args, 'profile', None), scope=scope)
 
             if result.get("report_path"):
                 console.print(Panel(

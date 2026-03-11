@@ -710,7 +710,7 @@ class PentestAgent:
         self.messages = []
         self.report_path = None
 
-    def run(self, target: str, report_format: str = "html", profile: str | None = None) -> dict:
+    def run(self, target: str, report_format: str = "html", profile: str | None = None, scope: str | None = None) -> dict:
         """Run the full pentest agent loop."""
         self.findings = {}
         self.messages = []
@@ -741,18 +741,47 @@ class PentestAgent:
 
         profile_note = f"\n\n{PROFILE_INSTRUCTIONS[profile]}" if profile else ""
 
+        # Build scope instruction
+        scope_note = ""
+        if scope:
+            if scope.isdigit():
+                port = scope
+                scope_note = (
+                    f"\n\nSCOPE: PORT {port} ONLY — Focus exclusively on port {port}. "
+                    f"Run nmap only against port {port} (use '-p {port}' flag). "
+                    f"Direct all web testing to the service on port {port} "
+                    f"(adjust URL to include :{port} if not standard). "
+                    f"Skip: full port scans, subdomain_enum, vhost_enum, dns_enum, subdomain_crtsh. "
+                    f"Do: identify the service → test relevant vulns for that service/protocol."
+                )
+            elif scope == "web":
+                scope_note = (
+                    "\n\nSCOPE: WEB ONLY — Focus on ports 80/443 and web application testing. "
+                    "Skip: full port scans (nmap basic only), subdomain_enum, dns_enum, vhost_enum. "
+                    "Prioritize: spider, dir_bust, vuln scanning, exploitation of web endpoints."
+                )
+            elif scope == "recon":
+                scope_note = (
+                    "\n\nSCOPE: RECON ONLY — Passive and active reconnaissance only. "
+                    "Run: shodan_lookup, nmap, check_headers, check_ssl, fingerprint_tech, "
+                    "dns_enum, subdomain_crtsh, detect_waf. "
+                    "Do NOT run any vulnerability scanning or exploitation tools."
+                )
+
         initial_message = (
-            f"Begin a comprehensive web penetration test against: {target}\n\n"
-            f"Report format requested: {report_format}{profile_note}\n\n"
-            f"Perform all phases: reconnaissance, enumeration, vulnerability scanning, "
-            f"exploitation attempts, and generate the final report in {report_format} format."
+            f"Begin a {'targeted' if scope else 'comprehensive'} web penetration test against: {target}\n\n"
+            f"Report format requested: {report_format}{profile_note}{scope_note}\n\n"
+            f"Perform {'the scoped' if scope else 'all'} phases and generate the final report in {report_format} format."
         )
 
         self.messages.append({"role": "user", "content": initial_message})
 
+        scope_label = f"Port {scope}" if (scope and scope.isdigit()) else (scope or "full").upper()
         console.print(Panel(
             f"[bold cyan]Target:[/bold cyan] {target}\n"
-            f"[bold cyan]Report:[/bold cyan] {report_format.upper()}",
+            f"[bold cyan]Report:[/bold cyan] {report_format.upper()}\n"
+            f"[bold cyan]Scope:[/bold cyan]  {scope_label}"
+            + (f"\n[bold cyan]Profile:[/bold cyan] {profile.upper()}" if profile else ""),
             title="[bold magenta]SniperSan Agent Starting[/bold magenta]",
             border_style="magenta"
         ))
