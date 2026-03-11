@@ -807,11 +807,16 @@ class PentestAgent:
             iteration += 1
 
             with console.status(f"[cyan]Agent thinking ({self.llm.name})...[/cyan]"):
-                response = self.llm.chat(
-                    messages=self.messages,
-                    system=SYSTEM_PROMPT,
-                    tools=TOOLS,
-                )
+                try:
+                    response = self.llm.chat(
+                        messages=self.messages,
+                        system=SYSTEM_PROMPT,
+                        tools=TOOLS,
+                    )
+                except Exception as e:
+                    console.print(f"\n[bold red]LLM connection error:[/bold red] {e}")
+                    console.print("[yellow]Tip: if using Claude, check internet access. Switch to Ollama with --llm ollama for offline use.[/yellow]")
+                    return {"report_path": self.report_path, "iterations": iteration, "error": str(e)}
 
             # Add assistant response to history
             self.messages.append(self.llm.build_assistant_message(response))
@@ -925,7 +930,12 @@ class PentestAgent:
             # Agent response loop
             while True:
                 with console.status(f"[cyan]Thinking ({self.llm.name})...[/cyan]"):
-                    response = self.llm.chat(messages=self.messages, system=SYSTEM_PROMPT, tools=TOOLS)
+                    try:
+                        response = self.llm.chat(messages=self.messages, system=SYSTEM_PROMPT, tools=TOOLS)
+                    except Exception as e:
+                        console.print(f"\n[bold red]LLM connection error:[/bold red] {e}")
+                        console.print("[yellow]Tip: switch to Ollama with --llm ollama for offline use.[/yellow]")
+                        break
 
                 self.messages.append(self.llm.build_assistant_message(response))
 
