@@ -14,6 +14,10 @@ WPSCAN_API_TOKEN = os.getenv("WPSCAN_API_TOKEN", "")
 SHODAN_API_KEY = os.getenv("SHODAN_API_KEY", "")
 CLAUDE_MODEL = "claude-sonnet-4-6"
 
+# Ollama
+OLLAMA_HOST  = os.getenv("OLLAMA_HOST", "http://sniperx1.uzc:11434")
+OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "qwen3.5:9b")
+
 DEFAULT_TIMEOUT = 10
 DEFAULT_THREADS = 20
 MAX_DIRS_TO_SCAN = 500

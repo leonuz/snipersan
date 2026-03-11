@@ -4,14 +4,21 @@ All notable changes to SniperSan are documented here.
 
 ---
 
-## [1.4.0] — 2026-03-11 (in progress)
+## [1.4.0] — 2026-03-11
 
-### Planned
-- Multi-LLM backend: Claude (Anthropic) + Ollama (local models)
-- Interactive LLM selector at startup
-- `--llm` CLI flag for non-interactive selection
-- OpenClaw skill (`/snipersan`) via SSH
-- `--query` single-shot mode for external callers
+### Added
+- **Multi-LLM backend** (`llm.py`) — abstraction layer supporting Claude (Anthropic API) and Ollama (local models via OpenAI-compatible `/v1/chat/completions`)
+- **Interactive LLM selector** at startup — Rich table showing Claude + all available Ollama models, with default pre-selected
+- **`--llm`** CLI flag — non-interactive LLM selection (`claude` or `ollama`)
+- **`--model`** CLI flag — specify Ollama model name (e.g. `qwen3.5:9b`, `llama3.1:8b`)
+- **`OLLAMA_HOST`** and **`OLLAMA_MODEL`** config vars — loaded from `.env`, default `http://sniperx1.uzc:11434` and `qwen3.5:9b`
+- **Tool format converter** `_anthropic_to_openai_tools()` — translates Anthropic `input_schema` → OpenAI `parameters` format for Ollama compatibility
+
+### Changed
+- `agent.py` — replaced direct `anthropic.Anthropic()` client with `self.llm` backend abstraction; both `run()` and `chat()` now backend-agnostic
+- `config.py` — added Ollama configuration constants
+- `main.py` — added `--llm` / `--model` flags; calls `select_llm()` before agent creation
+- `.env.example` — added `OLLAMA_HOST` and `OLLAMA_MODEL` placeholders
 
 ---
 

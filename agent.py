@@ -1,14 +1,12 @@
-"""Claude-powered pentest agent with tool use."""
+"""Multi-LLM pentest agent with tool use."""
 import json
 import sys
 from typing import Any
 
-import anthropic
 from rich.console import Console
 from rich.panel import Panel
 from rich.markdown import Markdown
 
-from config import ANTHROPIC_API_KEY, CLAUDE_MODEL
 from tools import recon, enumeration, vuln_scan, exploit, reporter
 
 console = Console()
@@ -705,11 +703,9 @@ Always explain what you're doing and why. Be methodical."""
 
 
 class PentestAgent:
-    def __init__(self):
-        if not ANTHROPIC_API_KEY:
-            console.print("[red]ERROR: ANTHROPIC_API_KEY not set. Add it to .env file.[/red]")
-            sys.exit(1)
-        self.client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
+    def __init__(self, llm_backend=None):
+        from llm import ClaudeBackend
+        self.llm = llm_backend or ClaudeBackend()
         self.findings = {}
         self.messages = []
         self.report_path = None
@@ -767,77 +763,65 @@ class PentestAgent:
         while iteration < max_iterations:
             iteration += 1
 
-            with console.status("[cyan]Agent thinking...[/cyan]"):
-                response = self.client.messages.create(
-                    model=CLAUDE_MODEL,
-                    max_tokens=4096,
+            with console.status(f"[cyan]Agent thinking ({self.llm.name})...[/cyan]"):
+                response = self.llm.chat(
+                    messages=self.messages,
                     system=SYSTEM_PROMPT,
                     tools=TOOLS,
-                    messages=self.messages
                 )
 
             # Add assistant response to history
-            self.messages.append({"role": "assistant", "content": response.content})
+            self.messages.append(self.llm.build_assistant_message(response))
 
-            # Process response
-            has_tool_use = False
+            # Display text output
+            if response["text"]:
+                console.print(Panel(
+                    Markdown(response["text"]),
+                    title="[bold green]Agent[/bold green]",
+                    border_style="green"
+                ))
+
+            # Process tool calls
             tool_results = []
+            for tc in response["tool_calls"]:
+                tool_name  = tc["name"]
+                tool_input = tc["input"]
 
-            for block in response.content:
-                if block.type == "text" and block.text:
-                    console.print(Panel(
-                        Markdown(block.text),
-                        title="[bold green]Agent[/bold green]",
-                        border_style="green"
-                    ))
+                console.print(f"\n[bold yellow]→ Tool:[/bold yellow] [cyan]{tool_name}[/cyan]")
+                if "target" in tool_input:
+                    console.print(f"  [dim]Target: {tool_input.get('target')}[/dim]")
 
-                elif block.type == "tool_use":
-                    has_tool_use = True
-                    tool_name = block.name
-                    tool_input = block.input
+                with console.status(f"[yellow]Running {tool_name}...[/yellow]"):
+                    try:
+                        result = _dispatch_tool(tool_name, tool_input, self.findings)
 
-                    console.print(f"\n[bold yellow]→ Tool:[/bold yellow] [cyan]{tool_name}[/cyan]")
-                    if "target" in tool_input:
-                        console.print(f"  [dim]Target: {tool_input.get('target')}[/dim]")
+                        if tool_name == "generate_report" and isinstance(result, str):
+                            self.report_path = result
 
-                    with console.status(f"[yellow]Running {tool_name}...[/yellow]"):
-                        try:
-                            result = _dispatch_tool(tool_name, tool_input, self.findings)
+                        _display_tool_result(tool_name, result)
 
-                            # Track report path
-                            if tool_name == "generate_report" and isinstance(result, str):
-                                self.report_path = result
+                        tool_results.append({
+                            "id": tc["id"],
+                            "name": tool_name,
+                            "content": json.dumps(result, default=str)[:8000],
+                        })
 
-                            # Summarize result for display
-                            _display_tool_result(tool_name, result)
+                    except Exception as e:
+                        error_msg = f"Tool error: {e}"
+                        console.print(f"  [red]{error_msg}[/red]")
+                        tool_results.append({
+                            "id": tc["id"],
+                            "name": tool_name,
+                            "content": json.dumps({"error": error_msg}),
+                        })
 
-                            tool_results.append({
-                                "type": "tool_result",
-                                "tool_use_id": block.id,
-                                "content": json.dumps(result, default=str)[:8000]
-                            })
+            # Send tool results back
+            if tool_results:
+                self.messages.append(self.llm.build_tool_result_message(tool_results))
 
-                        except Exception as e:
-                            error_msg = f"Tool error: {e}"
-                            console.print(f"  [red]{error_msg}[/red]")
-                            tool_results.append({
-                                "type": "tool_result",
-                                "tool_use_id": block.id,
-                                "content": json.dumps({"error": error_msg}),
-                                "is_error": True
-                            })
-
-            # If there were tool uses, send results back
-            if has_tool_use:
-                self.messages.append({"role": "user", "content": tool_results})
-
-            # Check stop condition
-            if response.stop_reason == "end_turn" and not has_tool_use:
+            # Stop conditions
+            if response["stop_reason"] == "end_turn" and not response["tool_calls"]:
                 console.print("\n[bold green]✓ Agent completed all tasks.[/bold green]")
-                break
-
-            if response.stop_reason == "end_turn":
-                # Agent finished naturally
                 break
 
         return {
@@ -867,17 +851,10 @@ class PentestAgent:
         })
 
         # Get initial ack
-        resp = self.client.messages.create(
-            model=CLAUDE_MODEL,
-            max_tokens=512,
-            system=SYSTEM_PROMPT,
-            tools=TOOLS,
-            messages=self.messages
-        )
-        self.messages.append({"role": "assistant", "content": resp.content})
-        for block in resp.content:
-            if block.type == "text":
-                console.print(f"[green]Agent:[/green] {block.text}")
+        resp = self.llm.chat(messages=self.messages, system=SYSTEM_PROMPT, tools=TOOLS)
+        self.messages.append(self.llm.build_assistant_message(resp))
+        if resp["text"]:
+            console.print(f"[green]Agent:[/green] {resp['text']}")
 
         while True:
             try:
@@ -904,49 +881,39 @@ class PentestAgent:
 
             # Agent response loop
             while True:
-                with console.status("[cyan]Thinking...[/cyan]"):
-                    response = self.client.messages.create(
-                        model=CLAUDE_MODEL,
-                        max_tokens=4096,
-                        system=SYSTEM_PROMPT,
-                        tools=TOOLS,
-                        messages=self.messages
-                    )
+                with console.status(f"[cyan]Thinking ({self.llm.name})...[/cyan]"):
+                    response = self.llm.chat(messages=self.messages, system=SYSTEM_PROMPT, tools=TOOLS)
 
-                self.messages.append({"role": "assistant", "content": response.content})
+                self.messages.append(self.llm.build_assistant_message(response))
 
-                has_tools = False
+                if response["text"]:
+                    console.print(f"\n[green]Agent:[/green] {response['text']}")
+
                 tool_results = []
+                for tc in response["tool_calls"]:
+                    console.print(f"\n[yellow]→ {tc['name']}[/yellow] [dim]{tc['input'].get('target', '')}[/dim]")
+                    with console.status(f"[yellow]Running {tc['name']}...[/yellow]"):
+                        try:
+                            result = _dispatch_tool(tc["name"], tc["input"], self.findings)
+                            if tc["name"] == "generate_report" and isinstance(result, str):
+                                self.report_path = result
+                            _display_tool_result(tc["name"], result)
+                            tool_results.append({
+                                "id": tc["id"],
+                                "name": tc["name"],
+                                "content": json.dumps(result, default=str)[:8000],
+                            })
+                        except Exception as e:
+                            tool_results.append({
+                                "id": tc["id"],
+                                "name": tc["name"],
+                                "content": json.dumps({"error": str(e)}),
+                            })
 
-                for block in response.content:
-                    if block.type == "text" and block.text:
-                        console.print(f"\n[green]Agent:[/green] {block.text}")
-                    elif block.type == "tool_use":
-                        has_tools = True
-                        console.print(f"\n[yellow]→ {block.name}[/yellow] [dim]{block.input.get('target', '')}[/dim]")
-                        with console.status(f"[yellow]Running {block.name}...[/yellow]"):
-                            try:
-                                result = _dispatch_tool(block.name, block.input, self.findings)
-                                if block.name == "generate_report" and isinstance(result, str):
-                                    self.report_path = result
-                                _display_tool_result(block.name, result)
-                                tool_results.append({
-                                    "type": "tool_result",
-                                    "tool_use_id": block.id,
-                                    "content": json.dumps(result, default=str)[:8000]
-                                })
-                            except Exception as e:
-                                tool_results.append({
-                                    "type": "tool_result",
-                                    "tool_use_id": block.id,
-                                    "content": json.dumps({"error": str(e)}),
-                                    "is_error": True
-                                })
+                if tool_results:
+                    self.messages.append(self.llm.build_tool_result_message(tool_results))
 
-                if has_tools:
-                    self.messages.append({"role": "user", "content": tool_results})
-
-                if response.stop_reason == "end_turn":
+                if response["stop_reason"] == "end_turn":
                     break
 
 

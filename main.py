@@ -152,6 +152,10 @@ Examples:
     parser.add_argument("-p", "--profile",
                         choices=["stealth", "aggressive", "api-only", "wordpress"],
                         help="Scan profile: stealth (passive only), aggressive (all tools), api-only (API focus), wordpress (WP-specific)")
+    parser.add_argument("--llm", choices=["claude", "ollama"],
+                        help="LLM backend to use (skips interactive selector)")
+    parser.add_argument("--model",
+                        help="Model name for Ollama backend (e.g. qwen3.5:9b, llama3.1:8b)")
     parser.add_argument("-y", "--yes", action="store_true",
                         help="Skip legal disclaimer (confirm you have authorization)")
     return parser.parse_args()
@@ -161,16 +165,10 @@ def main():
     args = parse_args()
     console.print(BANNER)
 
-    # Check API key early
-    from config import ANTHROPIC_API_KEY
-    if not ANTHROPIC_API_KEY:
-        console.print(Panel(
-            "[bold red]ANTHROPIC_API_KEY not configured![/bold red]\n\n"
-            "1. Copy [cyan].env.example[/cyan] to [cyan].env[/cyan]\n"
-            "2. Add your key: [cyan]ANTHROPIC_API_KEY=sk-ant-...[/cyan]",
-            border_style="red"
-        ))
-        sys.exit(1)
+    # LLM selector
+    from llm import select_llm
+    llm_backend = select_llm(llm_flag=args.llm, model_flag=getattr(args, "model", None))
+    console.print(f"\n[bold magenta]LLM:[/bold magenta] {llm_backend.name}\n")
 
     # Legal disclaimer
     if args.yes:
@@ -208,7 +206,7 @@ def main():
         if choice == "1":
             fmt = args.fmt if args.mode else get_report_format()
             console.print(f"\n[bold green]Starting automated pentest...[/bold green]\n")
-            agent = PentestAgent()
+            agent = PentestAgent(llm_backend=llm_backend)
             result = agent.run(target, fmt, profile=getattr(args, 'profile', None))
 
             if result.get("report_path"):
@@ -222,7 +220,7 @@ def main():
                 console.print("\n[yellow]No report generated.[/yellow]")
 
         else:  # choice == "2"
-            agent = PentestAgent()
+            agent = PentestAgent(llm_backend=llm_backend)
             agent.chat(target)
 
 
