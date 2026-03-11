@@ -744,27 +744,36 @@ class PentestAgent:
         # Build scope instruction
         scope_note = ""
         if scope:
-            if scope.isdigit():
+            if scope.startswith("webport:"):
+                port = scope.split(":", 1)[1]
+                scope_note = (
+                    f"\n\nSCOPE: WEB APPLICATION ON PORT {port} — "
+                    f"The target runs a web application on port {port} (e.g. 8080, 8443, 3000). "
+                    f"Run nmap only on port {port} with vuln/http scripts ('vuln' scan type, '-p {port}'). "
+                    f"Use {target.rstrip('/')}:{port} as the base URL for ALL web testing. "
+                    f"Run the full web testing methodology (spider, dir_bust, sqli, xss, etc.) against that port. "
+                    f"Skip: full port scans, subdomain_enum, vhost_enum, dns_enum, subdomain_crtsh."
+                )
+            elif scope.isdigit():
                 port = scope
                 scope_note = (
-                    f"\n\nSCOPE: PORT {port} ONLY — Focus exclusively on port {port}. "
-                    f"Run nmap only against port {port} (use '-p {port}' flag). "
-                    f"Direct all web testing to the service on port {port} "
-                    f"(adjust URL to include :{port} if not standard). "
-                    f"Skip: full port scans, subdomain_enum, vhost_enum, dns_enum, subdomain_crtsh. "
-                    f"Do: identify the service → test relevant vulns for that service/protocol."
+                    f"\n\nSCOPE: SERVICE PORT {port} — Focus exclusively on port {port}. "
+                    f"Run nmap only against port {port} with service/version detection and relevant scripts. "
+                    f"Identify the service running → apply appropriate tests for that protocol. "
+                    f"Skip: web vuln scanning, dir_bust, subdomain_enum, vhost_enum, dns_enum."
                 )
             elif scope == "web":
                 scope_note = (
-                    "\n\nSCOPE: WEB ONLY — Focus on ports 80/443 and web application testing. "
-                    "Skip: full port scans (nmap basic only), subdomain_enum, dns_enum, vhost_enum. "
-                    "Prioritize: spider, dir_bust, vuln scanning, exploitation of web endpoints."
+                    "\n\nSCOPE: WEB ONLY (80/443) — Focus on standard web ports. "
+                    "Run nmap basic on ports 80/443 only. "
+                    "Skip: full port scans, subdomain_enum, dns_enum, vhost_enum. "
+                    "Prioritize: spider, dir_bust, full vuln scanning, exploitation."
                 )
             elif scope == "recon":
                 scope_note = (
-                    "\n\nSCOPE: RECON ONLY — Passive and active reconnaissance only. "
+                    "\n\nSCOPE: RECON ONLY — Passive and active reconnaissance, no exploitation. "
                     "Run: shodan_lookup, nmap, check_headers, check_ssl, fingerprint_tech, "
-                    "dns_enum, subdomain_crtsh, detect_waf. "
+                    "dns_enum, subdomain_crtsh, detect_waf, spider_urls. "
                     "Do NOT run any vulnerability scanning or exploitation tools."
                 )
 
@@ -776,7 +785,12 @@ class PentestAgent:
 
         self.messages.append({"role": "user", "content": initial_message})
 
-        scope_label = f"Port {scope}" if (scope and scope.isdigit()) else (scope or "full").upper()
+        if scope and scope.startswith("webport:"):
+            scope_label = f"Web port {scope.split(':', 1)[1]}"
+        elif scope and scope.isdigit():
+            scope_label = f"Service port {scope}"
+        else:
+            scope_label = (scope or "full").upper()
         console.print(Panel(
             f"[bold cyan]Target:[/bold cyan] {target}\n"
             f"[bold cyan]Report:[/bold cyan] {report_format.upper()}\n"

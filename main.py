@@ -65,25 +65,29 @@ def get_target() -> str:
 
 
 def get_scope() -> str | None:
-    """Prompt for scan scope — full, specific port, web-only, or recon-only."""
+    """Prompt for scan scope."""
     table = Table(box=box.SIMPLE, show_header=False, border_style="dim")
     table.add_column("Key", style="bold cyan", width=4)
     table.add_column("Scope")
-    table.add_row("1", "Full scan  — all phases (default)")
-    table.add_row("2", "Port       — focus on a specific port")
-    table.add_row("3", "Web only   — ports 80/443, skip port scans & DNS enum")
-    table.add_row("4", "Recon only — passive + active recon, no vuln scan/exploit")
+    table.add_row("1", "Full scan    — all phases (default)")
+    table.add_row("2", "Web port     — web app on non-standard port (8080, 8443, etc.)")
+    table.add_row("3", "Web only     — ports 80/443, skip port scans & DNS enum")
+    table.add_row("4", "Service port — single non-web port (SSH, FTP, SMB, etc.)")
+    table.add_row("5", "Recon only   — passive + active recon, no vuln scan/exploit")
     console.print("\n[bold]Scan scope:[/bold]")
     console.print(table)
 
-    choice = Prompt.ask("Scope", choices=["1", "2", "3", "4"], default="1")
+    choice = Prompt.ask("Scope", choices=["1", "2", "3", "4", "5"], default="1")
     if choice == "1":
         return None
     elif choice == "2":
-        port = Prompt.ask("  [bold yellow]Port number[/bold yellow]")
-        return port.strip()
+        port = Prompt.ask("  [bold yellow]Web port[/bold yellow] [dim](e.g. 8080, 8443, 3000)[/dim]")
+        return f"webport:{port.strip()}"
     elif choice == "3":
         return "web"
+    elif choice == "4":
+        port = Prompt.ask("  [bold yellow]Service port[/bold yellow] [dim](e.g. 22, 21, 445)[/dim]")
+        return port.strip()
     else:
         return "recon"
 
@@ -177,7 +181,8 @@ Examples:
                         choices=["stealth", "aggressive", "api-only", "wordpress"],
                         help="Scan profile: stealth (passive only), aggressive (all tools), api-only (API focus), wordpress (WP-specific)")
     parser.add_argument("--port", "-P",
-                        help="Focus scan on a specific port (e.g. --port 8080). Use 'web' for 80/443 only, 'recon' for recon only.")
+                        help="Scope: port number for web app (8080→full web testing on that port), "
+                             "'service:PORT' for non-web service, 'web' for 80/443 only, 'recon' for recon only.")
     parser.add_argument("--llm", choices=["claude", "ollama"],
                         help="LLM backend to use (skips interactive selector)")
     parser.add_argument("--model",
@@ -231,7 +236,11 @@ def main():
 
         if choice == "1":
             fmt = args.fmt if args.mode else get_report_format()
-            scope = getattr(args, 'port', None) or (None if args.mode else get_scope())
+            raw_port = getattr(args, 'port', None)
+            if raw_port and raw_port.isdigit():
+                # Bare port number from CLI → treat as web port (most common case)
+                raw_port = f"webport:{raw_port}"
+            scope = raw_port or (None if args.mode else get_scope())
             console.print(f"\n[bold green]Starting automated pentest...[/bold green]\n")
             agent = PentestAgent(llm_backend=llm_backend)
             result = agent.run(target, fmt, profile=getattr(args, 'profile', None), scope=scope)
