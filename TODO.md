@@ -20,8 +20,8 @@ Active task list for SniperSan development. Items are grouped by area and ordere
 ## Features
 
 ### High Priority
-- [ ] **OpenClaw skill** — `/snipersan` SSH-based skill for OpenClaw orchestrator
-- [ ] **`--query` mode** — single-shot invocation for external callers (like SniperFIN)
+- [x] **OpenClaw skill** — `/snipersan` SSH-based skill for OpenClaw orchestrator
+- [x] **`--query` mode** — single-shot invocation for external callers (like SniperFIN)
 - [ ] **SecLists integration** — download common.txt (4700 entries) and subdomains (9985 entries) from SecLists on first run
 - [ ] **WHOIS lookup** — registrar info, registration dates, nameservers via `python-whois`
 - [ ] **Auth bypass patterns** — SQLi in login fields, type juggling payloads, mass assignment

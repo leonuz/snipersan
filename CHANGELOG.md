@@ -4,6 +4,29 @@ All notable changes to SniperSan are documented here.
 
 ---
 
+## [1.4.2] — 2026-03-12
+
+### Fixed
+- **OpenClaw `/snipersan` prefix stripping** (`main.py`) — OpenClaw passes the full invocation string (e.g. `/snipersan quick scan to 192.168.0.254`) as `{user_query}`. The `--query` handler now strips the leading `/snipersan` token before sending to the agent loop
+- **IPv6 connection errors** — `api.anthropic.com` added to `/etc/hosts` with its IPv4 address (`160.79.104.10`) to bypass IPv6 resolution failures on this host. `httpx` was preferring IPv6 which is not routed, causing `APIConnectionError` on every call from `localhost`
+
+### Added
+- **`markdown` package** — installed in venv for MD→HTML→PDF pipeline in report generation
+
+---
+
+## [1.4.1] — 2026-03-12
+
+### Added
+- **OpenClaw skill** (`openclaw/skills/snipersan/SKILL.md`) — SSH-based skill invocable as `/snipersan <request>` from OpenClaw orchestrator; passes natural language queries to `--query` mode
+- **`--query` / `-q` mode** (`main.py`, `agent.py`) — silent single-shot agentic loop for external callers (OpenClaw, scripts, CI); returns plain text, no Rich UI, no banners
+- **`PentestAgent.query()`** — dedicated method for query mode: max 30 iterations, plain text output, graceful error handling
+
+### Changed
+- `main.py` — `--query` bypasses LLM selector, banner, disclaimer, and all interactive prompts; uses `ClaudeBackend` directly
+
+---
+
 ## [1.4.0] — 2026-03-11
 
 ### Added
