@@ -10,6 +10,7 @@ import sys
 import requests
 from typing import Any
 
+import httpx
 import anthropic
 from rich.console import Console
 from rich.table import Table
